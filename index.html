@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEFCON: RELATIONSHIP — Threat Assessment System</title>
+<meta name="description" content="Cross-references text response times, emoji usage, and calendar events to predict relationship danger zones.">
+<meta property="og:title" content="DEFCON: RELATIONSHIP">
+<meta property="og:description" content="AI-powered girlfriend mood tracker. Predicts danger zones before it's too late.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚨</text></svg>">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #111;
+  --bg-card: #1a1a1a;
+  --border: #2a2a2a;
+  --green: #00ff41;
+  --green-dim: #00aa2a;
+  --yellow: #ffdd00;
+  --orange: #ff8c00;
+  --red: #ff0040;
+  --red-glow: rgba(255, 0, 64, 0.3);
+  --text: #c0c0c0;
+  --text-bright: #e0e0e0;
+  --mono: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+body {
+  font-family: var(--mono);
+  background: var(--bg-primary);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* CRT scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.1) 0px,
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+  z-index: 9999;
+  animation: crtFlicker 0.1s steps(2) 3;
+}
+
+@keyframes crtFlicker {
+  0% { opacity: 0.8; }
+  50% { opacity: 0.4; }
+  100% { opacity: 0.15; }
+}
+
+/* Header */
+.header {
+  text-align: center;
+  padding: 24px 16px 16px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #111 0%, var(--bg-primary) 100%);
+}
+
+.header h1 {
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: var(--green);
+  text-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
+}
+
+.header .subtitle {
+  font-size: 0.7rem;
+  color: #555;
+  letter-spacing: 4px;
+  margin-top: 4px;
+  animation: subtitlePulse 3s ease-in-out infinite;
+}
+
+@keyframes subtitlePulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Scenario bar */
+.scenario-bar {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.scenario-btn {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.scenario-btn:hover {
+  border-color: var(--green-dim);
+  color: var(--green);
+}
+
+.scenario-btn.active {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(0, 255, 65, 0.08);
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.15);
+}
+
+/* Recalculating overlay */
+.recalculating {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.recalculating.show {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.recalculating span {
+  font-size: 1.2rem;
+  color: var(--green);
+  letter-spacing: 4px;
+  animation: recalcBlink 0.4s steps(1) infinite;
+}
+
+@keyframes recalcBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Main grid */
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 16px;
+  padding: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.gauge-section {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.timeline-section {
+  grid-column: 1;
+}
+
+.calendar-section {
+  grid-column: 2;
+}
+
+.factors-section {
+  grid-column: 1 / -1;
+}
+
+/* Card base */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.card-header {
+  font-size: 0.65rem;
+  letter-spacing: 3px;
+  color: #555;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+/* Gauge */
+.gauge-container {
+  position: relative;
+  width: 320px;
+  height: 200px;
+}
+
+.gauge-container canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.defcon-display {
+  text-align: center;
+  margin-top: -10px;
+}
+
+.defcon-number {
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1;
+  transition: color 0.5s;
+}
+
+.defcon-label {
+  font-size: 0.8rem;
+  margin-top: 4px;
+  letter-spacing: 2px;
+  transition: color 0.5s;
+}
+
+/* Pulsing red glow for DEFCON 1 */
+.gauge-section.defcon-1 .card {
+  box-shadow: 0 0 30px var(--red-glow);
+  border-color: var(--red);
+  animation: defcon1Pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes defcon1Pulse {
+  0%, 100% { box-shadow: 0 0 20px var(--red-glow); }
+  50% { box-shadow: 0 0 50px var(--red-glow), 0 0 80px rgba(255, 0, 64, 0.15); }
+}
+
+/* Signal timeline */
+.signal-list {
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.signal-list::-webkit-scrollbar { width: 4px; }
+.signal-list::-webkit-scrollbar-track { background: var(--bg-primary); }
+.signal-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.signal-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  border-left: 3px solid var(--border);
+  animation: signalFadeIn 0.3s ease-out;
+  font-size: 0.75rem;
+}
+
+@keyframes signalFadeIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.signal-item.severity-critical { border-left-color: var(--red); }
+.signal-item.severity-high { border-left-color: var(--orange); }
+.signal-item.severity-medium { border-left-color: var(--yellow); }
+.signal-item.severity-low { border-left-color: var(--green); }
+
+.signal-icon { font-size: 1rem; flex-shrink: 0; }
+.signal-body { flex: 1; }
+
+.signal-time {
+  font-size: 0.6rem;
+  color: var(--green-dim);
+  margin-bottom: 2px;
+}
+
+.signal-text { color: var(--text-bright); }
+
+.signal-badge {
+  font-size: 0.55rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.signal-badge.critical { background: rgba(255, 0, 64, 0.2); color: var(--red); }
+.signal-badge.high { background: rgba(255, 140, 0, 0.2); color: var(--orange); }
+.signal-badge.medium { background: rgba(255, 221, 0, 0.2); color: var(--yellow); }
+.signal-badge.low { background: rgba(0, 255, 65, 0.2); color: var(--green); }
+
+/* Calendar */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.cal-header span {
+  font-size: 0.8rem;
+  color: var(--text-bright);
+}
+
+.cal-nav {
+  font-family: var(--mono);
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 2px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 0.7rem;
+}
+
+.cal-nav:hover { border-color: var(--green-dim); color: var(--green); }
+
+.cal-day-name {
+  font-size: 0.55rem;
+  color: #555;
+  text-align: center;
+  padding: 4px 0;
+}
+
+.cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  border-radius: 4px;
+  cursor: default;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.cal-day.empty { opacity: 0; }
+.cal-day.today { outline: 2px solid var(--green); outline-offset: -2px; }
+
+.cal-day.threat-none { background: rgba(0, 255, 65, 0.06); color: var(--green-dim); }
+.cal-day.threat-low { background: rgba(0, 255, 65, 0.12); color: var(--green); }
+.cal-day.threat-medium { background: rgba(255, 221, 0, 0.12); color: var(--yellow); }
+.cal-day.threat-high { background: rgba(255, 140, 0, 0.15); color: var(--orange); }
+.cal-day.threat-critical { background: rgba(255, 0, 64, 0.18); color: var(--red); animation: dayPulse 2s ease-in-out infinite; }
+
+@keyframes dayPulse {
+  0%, 100% { background: rgba(255, 0, 64, 0.18); }
+  50% { background: rgba(255, 0, 64, 0.3); }
+}
+
+.cal-day .tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #222;
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  white-space: nowrap;
+  color: var(--text-bright);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.cal-day:hover .tooltip { display: block; }
+
+.cal-day .event-dot {
+  position: absolute;
+  bottom: 3px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Factors panel */
+.factors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.factor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.factor-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+}
+
+.factor-name { color: var(--text); }
+
+.factor-value {
+  font-weight: 700;
+  transition: color 0.5s;
+}
+
+.factor-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.factor-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), background-color 0.5s;
+  width: 0%;
+}
+
+.factor-detail {
+  font-size: 0.55rem;
+  color: #555;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 24px 16px;
+  font-size: 0.55rem;
+  color: #333;
+  letter-spacing: 3px;
+  border-top: 1px solid var(--border);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+  .gauge-section, .timeline-section, .calendar-section, .factors-section {
+    grid-column: 1;
+  }
+  .gauge-container { width: 260px; height: 170px; }
+  .scenario-bar { justify-content: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1>DEFCON: RELATIONSHIP</h1>
+  <div class="subtitle">THREAT ASSESSMENT SYSTEM v1.0</div>
+</header>
+
+<nav class="scenario-bar" id="scenarioBar"></nav>
+
+<div class="recalculating" id="recalcOverlay">
+  <span>RECALCULATING...</span>
+</div>
+
+<main class="dashboard">
+  <section class="gauge-section" id="gaugeSection">
+    <div class="card">
+      <div class="card-header">// CURRENT THREAT LEVEL</div>
+      <div class="gauge-container">
+        <canvas id="gaugeCanvas" width="640" height="400"></canvas>
+      </div>
+      <div class="defcon-display">
+        <div class="defcon-number" id="defconNumber">5</div>
+        <div class="defcon-label" id="defconLabel">ALL CLEAR</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="timeline-section">
+    <div class="card">
+      <div class="card-header">// INTERCEPTED SIGNALS</div>
+      <div class="signal-list" id="signalList"></div>
+    </div>
+  </section>
+
+  <section class="calendar-section">
+    <div class="card">
+      <div class="card-header">// DANGER ZONE CALENDAR</div>
+      <div class="cal-header">
+        <button class="cal-nav" id="calPrev">&lt;</button>
+        <span id="calTitle">February 2026</span>
+        <button class="cal-nav" id="calNext">&gt;</button>
+      </div>
+      <div class="calendar-grid" id="calGrid"></div>
+    </div>
+  </section>
+
+  <section class="factors-section">
+    <div class="card">
+      <div class="card-header">// MOOD FACTOR ANALYSIS</div>
+      <div class="factors-grid" id="factorsGrid"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  CLASSIFIED — BOYFRIEND INTELLIGENCE AGENCY (BIA) — UNAUTHORIZED ACCESS WILL RESULT IN SLEEPING ON THE COUCH
+</footer>
+
+<script>
+// ============================================================
+// DATA STRUCTURES & MOCK SCENARIOS
+// ============================================================
+
+const SCENARIOS = {
+  'honeymoon': {
+    name: 'Honeymoon Phase',
+    emoji: '\u{1F495}',
+    description: 'Everything is perfect. Too perfect.',
+    messages: [
+      { time: '9:00 AM', text: 'good morning babe!! \u{1F495}\u{2600}\u{FE0F}\u{1F970}', responseTimeMin: 1, emojis: ['\u{1F495}','\u{2600}\u{FE0F}','\u{1F970}'], sender: 'her' },
+      { time: '9:01 AM', text: 'miss you already \u{1F618}\u{1F618}\u{1F618}', responseTimeMin: 1, emojis: ['\u{1F618}','\u{1F618}','\u{1F618}'], sender: 'her' },
+      { time: '9:15 AM', text: 'look at this cute dog i saw \u{1F415}\u{2764}\u{FE0F}', responseTimeMin: 2, emojis: ['\u{1F415}','\u{2764}\u{FE0F}'], sender: 'her' },
+      { time: '10:30 AM', text: 'thinking about you \u{1F97A}\u{1F497}', responseTimeMin: 3, emojis: ['\u{1F97A}','\u{1F497}'], sender: 'her' },
+      { time: '12:00 PM', text: 'lunch without you is so boring \u{1F62D}\u{1F495}', responseTimeMin: 2, emojis: ['\u{1F62D}','\u{1F495}'], sender: 'her' },
+      { time: '2:00 PM', text: 'cant wait for tonight!! \u{1F389}\u{1F60D}', responseTimeMin: 1, emojis: ['\u{1F389}','\u{1F60D}'], sender: 'her' },
+      { time: '4:00 PM', text: 'leaving work early to see you sooner \u{1F3C3}\u{200D}\u{2640}\u{FE0F}\u{1F4A8}\u{2764}\u{FE0F}', responseTimeMin: 2, emojis: ['\u{1F3C3}\u{200D}\u{2640}\u{FE0F}','\u{1F4A8}','\u{2764}\u{FE0F}'], sender: 'her' },
+      { time: '6:30 PM', text: 'i love you so much it should be illegal \u{1F60D}\u{1F60D}\u{1F60D}', responseTimeMin: 1, emojis: ['\u{1F60D}','\u{1F60D}','\u{1F60D}'], sender: 'her' },
+    ],
+    events: [
+      { date: 14, title: "Valentine's Dinner \u2014 Reservation Confirmed", category: 'date', riskLevel: 0 },
+      { date: 16, title: 'Weekend Getaway', category: 'date', riskLevel: 0 },
+      { date: 20, title: "Couple's Yoga", category: 'date', riskLevel: 0 },
+    ]
+  },
+  'forgot-anniversary': {
+    name: 'Forgot Anniversary',
+    emoji: '\u{1F480}',
+    description: "The calendar knows. She knows you don't know.",
+    messages: [
+      { time: '8:00 AM', text: 'hey', responseTimeMin: 45, emojis: [], sender: 'her' },
+      { time: '10:30 AM', text: 'so do you have any plans for tomorrow?', responseTimeMin: 120, emojis: [], sender: 'her' },
+      { time: '12:00 PM', text: 'just wondering', responseTimeMin: 30, emojis: [], sender: 'her' },
+      { time: '2:00 PM', text: 'fine', responseTimeMin: 5, emojis: [], sender: 'her' },
+      { time: '3:00 PM', text: 'k', responseTimeMin: 2, emojis: [], sender: 'her' },
+      { time: '5:00 PM', text: 'whatever', responseTimeMin: 180, emojis: [], sender: 'her' },
+      { time: '8:00 PM', text: 'its fine. really.', responseTimeMin: 60, emojis: [], sender: 'her' },
+      { time: '10:00 PM', text: 'goodnight.', responseTimeMin: 240, emojis: [], sender: 'her' },
+    ],
+    events: [
+      { date: 20, title: '2-Year Anniversary', category: 'anniversary', riskLevel: 100 },
+      { date: 20, title: 'Your Calendar: "Gaming with the boys"', category: 'conflict', riskLevel: 100 },
+      { date: 22, title: "Her Mom's Birthday (Did you get a gift?)", category: 'milestone', riskLevel: 80 },
+    ]
+  },
+  'left-on-read': {
+    name: 'Left on Read (6 Hours)',
+    emoji: '\u{1F440}',
+    description: 'Two blue checkmarks. Zero replies. Maximum anxiety.',
+    messages: [
+      { time: '10:00 AM', text: 'hey babe what do you want for dinner tonight? \u{1F355}', responseTimeMin: 3, emojis: ['\u{1F355}'], sender: 'her' },
+      { time: '10:03 AM', text: '??', responseTimeMin: 60, emojis: [], sender: 'her' },
+      { time: '11:00 AM', text: 'hello?', responseTimeMin: 60, emojis: [], sender: 'her' },
+      { time: '12:00 PM', text: "i can see you're online", responseTimeMin: 120, emojis: [], sender: 'her' },
+      { time: '2:00 PM', text: 'ok', responseTimeMin: 30, emojis: [], sender: 'her' },
+      { time: '3:30 PM', text: "nvm i'll figure it out myself", responseTimeMin: 180, emojis: [], sender: 'her' },
+      { time: '4:00 PM', text: "actually don't bother coming home for dinner", responseTimeMin: 0, emojis: [], sender: 'her' },
+    ],
+    events: [
+      { date: 19, title: 'You: Posted Instagram story at a bar', category: 'conflict', riskLevel: 90 },
+      { date: 19, title: 'Her: Unfollowed your best friend', category: 'signal', riskLevel: 70 },
+    ]
+  },
+  'liked-exs-post': {
+    name: "Liked Ex's Instagram",
+    emoji: '\u{2620}\u{FE0F}',
+    description: 'She has notifications on. She always has notifications on.',
+    messages: [
+      { time: '9:00 AM', text: 'good morning \u{1F60A}', responseTimeMin: 2, emojis: ['\u{1F60A}'], sender: 'her' },
+      { time: '9:47 AM', text: 'interesting', responseTimeMin: 1, emojis: [], sender: 'her' },
+      { time: '9:48 AM', text: "so you're up at 9:47 huh", responseTimeMin: 1, emojis: [], sender: 'her' },
+      { time: '9:48 AM', text: 'busy liking photos?', responseTimeMin: 0, emojis: [], sender: 'her' },
+      { time: '9:50 AM', text: "it's fine", responseTimeMin: 300, emojis: [], sender: 'her' },
+      { time: '2:00 PM', text: 'do you think she\'s pretty', responseTimeMin: 0, emojis: [], sender: 'her' },
+      { time: '2:00 PM', text: "don't answer that", responseTimeMin: 0, emojis: [], sender: 'her' },
+      { time: '6:00 PM', text: 'we need to talk.', responseTimeMin: 0, emojis: [], sender: 'her' },
+    ],
+    events: [
+      { date: 19, title: "Instagram Activity: Liked ex's beach photo", category: 'catastrophe', riskLevel: 100 },
+      { date: 19, title: 'Her: Changed Netflix password', category: 'signal', riskLevel: 95 },
+      { date: 20, title: 'Her: "Dinner with the girls"', category: 'signal', riskLevel: 60 },
+      { date: 21, title: 'Her: Therapy appointment (new)', category: 'signal', riskLevel: 50 },
+    ]
+  },
+  'brought-flowers': {
+    name: 'Brought Home Flowers',
+    emoji: '\u{1F490}',
+    description: 'Threat level decreasing. Diplomacy is working.',
+    messages: [
+      { time: '9:00 AM', text: 'morning', responseTimeMin: 15, emojis: [], sender: 'her' },
+      { time: '12:00 PM', text: 'hey', responseTimeMin: 10, emojis: [], sender: 'her' },
+      { time: '5:30 PM', text: 'omg wait are those for me?? \u{1F97A}', responseTimeMin: 1, emojis: ['\u{1F97A}'], sender: 'her' },
+      { time: '5:31 PM', text: 'BABE \u{1F62D}\u{1F62D}\u{1F62D}\u{1F495}', responseTimeMin: 0, emojis: ['\u{1F62D}','\u{1F62D}','\u{1F62D}','\u{1F495}'], sender: 'her' },
+      { time: '5:32 PM', text: 'theyre so beautiful i cant \u{1F60D}\u{1F338}\u{1F490}\u{2764}\u{FE0F}', responseTimeMin: 0, emojis: ['\u{1F60D}','\u{1F338}','\u{1F490}','\u{2764}\u{FE0F}'], sender: 'her' },
+      { time: '5:33 PM', text: 'i love you i love you i love you \u{1F495}\u{1F495}\u{1F495}', responseTimeMin: 0, emojis: ['\u{1F495}','\u{1F495}','\u{1F495}'], sender: 'her' },
+      { time: '5:35 PM', text: 'posting these rn everyone needs to know \u{1F4F8}\u{1F60D}', responseTimeMin: 1, emojis: ['\u{1F4F8}','\u{1F60D}'], sender: 'her' },
+      { time: '6:00 PM', text: 'ok what did you do wrong \u{1F914}', responseTimeMin: 5, emojis: ['\u{1F914}'], sender: 'her' },
+    ],
+    events: [
+      { date: 19, title: 'Flowers delivered', category: 'recovery', riskLevel: 0 },
+      { date: 21, title: 'Date Night \u2014 her choice', category: 'date', riskLevel: 0 },
+    ]
+  },
+  'we-need-to-talk': {
+    name: '"We Need to Talk"',
+    emoji: '\u{1FAA6}',
+    description: 'Five words. Zero survivors.',
+    messages: [
+      { time: '7:00 AM', text: 'we need to talk.', responseTimeMin: 0, emojis: [], sender: 'her' },
+      { time: '7:00 AM', text: 'when you get home.', responseTimeMin: 0, emojis: [], sender: 'her' },
+      { time: '12:00 PM', text: "don't forget.", responseTimeMin: 0, emojis: [], sender: 'her' },
+    ],
+    events: [
+      { date: 19, title: 'The Talk', category: 'catastrophe', riskLevel: 100 },
+      { date: 18, title: 'Her: Cleared browser history', category: 'signal', riskLevel: 80 },
+      { date: 17, title: 'Her: Liked 47 posts by "Jake from work"', category: 'catastrophe', riskLevel: 95 },
+      { date: 20, title: 'Her: Brunch with "just a friend"', category: 'signal', riskLevel: 85 },
+    ]
+  }
+};
+
+const DEFCON_LEVELS = {
+  5: { label: 'ALL CLEAR', color: '#00ff41' },
+  4: { label: 'SLIGHT DISTURBANCE', color: '#88ff00' },
+  3: { label: 'PROCEED WITH CAUTION', color: '#ffdd00' },
+  2: { label: 'DANGER ZONE', color: '#ff8c00' },
+  1: { label: 'SLEEP ON THE COUCH', color: '#ff0040' }
+};
+
+// ============================================================
+// GLOBAL STATE
+// ============================================================
+
+let currentScenario = null;
+let currentScores = {};
+let calMonth = 1; // Feb (0-indexed)
+let calYear = 2026;
+
+// ============================================================
+// SCORING ENGINE
+// ============================================================
+
+function calcResponseTimeScore(messages) {
+  const baseline = 3;
+  const times = messages.map(function(m) { return m.responseTimeMin; });
+  const avg = times.reduce(function(a, b) { return a + b; }, 0) / times.length;
+  if (avg <= baseline) return 0;
+  if (avg >= 180) return 100;
+  return Math.min(100, ((avg - baseline) / (180 - baseline)) * 100);
+}
+
+function calcEmojiScore(messages) {
+  var withEmojis = messages.filter(function(m) { return m.emojis.length > 0; }).length;
+  var ratio = withEmojis / messages.length;
+  if (ratio >= 0.6) return 0;
+  if (ratio <= 0) return 100;
+  return Math.min(100, ((0.6 - ratio) / 0.6) * 100);
+}
+
+function calcCalendarScore(events) {
+  if (!events.length) return 0;
+  var maxRisk = Math.max.apply(null, events.map(function(e) { return e.riskLevel; }));
+  var avgRisk = events.reduce(function(a, e) { return a + e.riskLevel; }, 0) / events.length;
+  return Math.min(100, maxRisk * 0.7 + avgRisk * 0.3);
+}
+
+function calcTextLengthScore(messages) {
+  var lengths = messages.map(function(m) { return m.text.length; });
+  var avg = lengths.reduce(function(a, b) { return a + b; }, 0) / lengths.length;
+  if (avg >= 30) return 0;
+  if (avg <= 3) return 100;
+  return Math.min(100, ((30 - avg) / 27) * 100);
+}
+
+function calcFineIndex(messages) {
+  var fineWords = ['fine', 'k', 'whatever', 'okay', 'sure', 'ok', 'nvm', 'nothing', 'nope'];
+  var fineMessages = messages.filter(function(m) {
+    var lower = m.text.toLowerCase().replace(/[^a-z\s']/g, '').trim();
+    return fineWords.indexOf(lower) !== -1 || lower === "it's fine" || lower === 'its fine' || lower === 'its fine really';
+  });
+  var ratio = fineMessages.length / messages.length;
+  return Math.min(100, ratio * 200);
+}
+
+function calcThreatLevel() {
+  var msgs = currentScenario.messages;
+  var evts = currentScenario.events;
+
+  var scores = {
+    responseTime: calcResponseTimeScore(msgs),
+    emoji: calcEmojiScore(msgs),
+    calendar: calcCalendarScore(evts),
+    textLength: calcTextLengthScore(msgs),
+    fineIndex: calcFineIndex(msgs)
+  };
+
+  var composite =
+    scores.responseTime * 0.30 +
+    scores.emoji * 0.20 +
+    scores.calendar * 0.20 +
+    scores.textLength * 0.15 +
+    scores.fineIndex * 0.15;
+
+  var defcon;
+  if (composite <= 10) defcon = 5;
+  else if (composite <= 30) defcon = 4;
+  else if (composite <= 50) defcon = 3;
+  else if (composite <= 75) defcon = 2;
+  else defcon = 1;
+
+  currentScores = {
+    responseTime: scores.responseTime,
+    emoji: scores.emoji,
+    calendar: scores.calendar,
+    textLength: scores.textLength,
+    fineIndex: scores.fineIndex,
+    composite: composite,
+    defcon: defcon
+  };
+  return currentScores;
+}
+
+// ============================================================
+// GAUGE RENDERER
+// ============================================================
+
+var gaugeAnimation = null;
+var currentNeedleAngle = Math.PI;
+
+function renderGauge(defcon) {
+  var canvas = document.getElementById('gaugeCanvas');
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width;
+  var h = canvas.height;
+  var cx = w / 2;
+  var cy = h - 40;
+  var radius = Math.min(cx, cy) - 30;
+
+  var targetAngle = Math.PI - ((5 - defcon) / 4) * Math.PI;
+
+  if (gaugeAnimation) cancelAnimationFrame(gaugeAnimation);
+
+  function animate() {
+    var diff = targetAngle - currentNeedleAngle;
+    if (Math.abs(diff) < 0.005) {
+      currentNeedleAngle = targetAngle;
+      drawGauge(ctx, cx, cy, radius, w, h, currentNeedleAngle);
+      return;
+    }
+    currentNeedleAngle += diff * 0.06;
+    drawGauge(ctx, cx, cy, radius, w, h, currentNeedleAngle);
+    gaugeAnimation = requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+function drawGauge(ctx, cx, cy, radius, w, h, needleAngle) {
+  ctx.clearRect(0, 0, w, h);
+
+  var segments = [
+    { start: Math.PI, end: Math.PI * 0.8, color: '#00ff41' },
+    { start: Math.PI * 0.8, end: Math.PI * 0.6, color: '#88ff00' },
+    { start: Math.PI * 0.6, end: Math.PI * 0.4, color: '#ffdd00' },
+    { start: Math.PI * 0.4, end: Math.PI * 0.2, color: '#ff8c00' },
+    { start: Math.PI * 0.2, end: 0, color: '#ff0040' },
+  ];
+
+  for (var s = 0; s < segments.length; s++) {
+    var seg = segments[s];
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, seg.start, seg.end, true);
+    ctx.lineWidth = 20;
+    ctx.strokeStyle = seg.color;
+    ctx.globalAlpha = 0.3;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  for (var s = 0; s < segments.length; s++) {
+    var seg = segments[s];
+    var segEnd = Math.max(seg.end, needleAngle);
+    if (seg.start <= needleAngle) continue;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, seg.start, segEnd, true);
+    ctx.lineWidth = 20;
+    ctx.strokeStyle = seg.color;
+    ctx.globalAlpha = 0.9;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  for (var i = 0; i <= 4; i++) {
+    var angle = Math.PI - (i / 4) * Math.PI;
+    var x1 = cx + Math.cos(angle) * (radius - 16);
+    var y1 = cy + Math.sin(angle) * (radius - 16);
+    var x2 = cx + Math.cos(angle) * (radius + 16);
+    var y2 = cy + Math.sin(angle) * (radius + 16);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    var lx = cx + Math.cos(angle) * (radius + 30);
+    var ly = cy + Math.sin(angle) * (radius + 30);
+    ctx.fillStyle = '#555';
+    ctx.font = '16px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(5 - i), lx, ly);
+  }
+
+  var nx = cx + Math.cos(needleAngle) * (radius - 30);
+  var ny = cy + Math.sin(needleAngle) * (radius - 30);
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(nx, ny);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#fff';
+  ctx.shadowBlur = 10;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+  ctx.fillStyle = '#333';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+}
+
+// ============================================================
+// DEFCON DISPLAY
+// ============================================================
+
+function updateDefconDisplay(defcon) {
+  var level = DEFCON_LEVELS[defcon];
+  var numEl = document.getElementById('defconNumber');
+  var labelEl = document.getElementById('defconLabel');
+  var section = document.getElementById('gaugeSection');
+
+  numEl.textContent = String(defcon);
+  numEl.style.color = level.color;
+  labelEl.textContent = level.label;
+  labelEl.style.color = level.color;
+
+  section.className = 'gauge-section';
+  if (defcon === 1) section.classList.add('defcon-1');
+}
+
+// ============================================================
+// SIGNAL TIMELINE
+// ============================================================
+
+function generateSignals(scenario) {
+  var signals = [];
+  var msgs = scenario.messages;
+  var evts = scenario.events;
+
+  var avgResponse = msgs.reduce(function(a, m) { return a + m.responseTimeMin; }, 0) / msgs.length;
+  if (avgResponse > 60) {
+    signals.push({ icon: '\u{1F6A8}', text: 'Avg response time: ' + Math.round(avgResponse) + 'min \u2014 baseline: 3min', severity: 'critical', time: 'ONGOING' });
+  } else if (avgResponse > 30) {
+    signals.push({ icon: '\u26A0\uFE0F', text: 'Response time elevated: ' + Math.round(avgResponse) + 'min avg', severity: 'high', time: 'ONGOING' });
+  } else if (avgResponse > 10) {
+    signals.push({ icon: '\u{1F4E1}', text: 'Response time slightly elevated: ' + Math.round(avgResponse) + 'min avg', severity: 'medium', time: 'ONGOING' });
+  } else {
+    signals.push({ icon: '\u2705', text: 'Response time nominal: ' + Math.round(avgResponse) + 'min avg', severity: 'low', time: 'ONGOING' });
+  }
+
+  var emojiRatio = msgs.filter(function(m) { return m.emojis.length > 0; }).length / msgs.length;
+  if (emojiRatio === 0) {
+    signals.push({ icon: '\u{1F534}', text: 'Emoji usage: ZERO \u2014 complete emotional shutdown detected', severity: 'critical', time: 'LAST 24H' });
+  } else if (emojiRatio < 0.2) {
+    signals.push({ icon: '\u26A0\uFE0F', text: 'Emoji usage dropped to ' + Math.round(emojiRatio * 100) + '% \u2014 normally 60%+', severity: 'high', time: 'LAST 24H' });
+  } else if (emojiRatio < 0.5) {
+    signals.push({ icon: '\u{1F4C9}', text: 'Emoji usage declining: ' + Math.round(emojiRatio * 100) + '%', severity: 'medium', time: 'LAST 24H' });
+  } else {
+    signals.push({ icon: '\u{1F495}', text: 'Emoji usage healthy: ' + Math.round(emojiRatio * 100) + '% of messages', severity: 'low', time: 'LAST 24H' });
+  }
+
+  var avgLen = msgs.reduce(function(a, m) { return a + m.text.length; }, 0) / msgs.length;
+  if (avgLen < 5) {
+    signals.push({ icon: '\u{1F534}', text: 'Avg text length: ' + Math.round(avgLen) + ' chars \u2014 monosyllabic responses detected', severity: 'critical', time: 'LAST 24H' });
+  } else if (avgLen < 15) {
+    signals.push({ icon: '\u26A0\uFE0F', text: 'Text length declining: ' + Math.round(avgLen) + ' chars avg \u2014 down from baseline', severity: 'high', time: 'LAST 24H' });
+  }
+
+  var fineWords = ['fine', 'k', 'whatever', 'okay', 'sure', 'ok', 'nvm', 'nothing', 'nope'];
+  var fineCount = msgs.filter(function(m) {
+    var lower = m.text.toLowerCase().replace(/[^a-z\s']/g, '').trim();
+    return fineWords.indexOf(lower) !== -1 || lower.indexOf("it's fine") !== -1 || lower.indexOf('its fine') !== -1;
+  }).length;
+  if (fineCount >= 3) {
+    signals.push({ icon: '\u{1F480}', text: '"Fine" detected ' + fineCount + 'x \u2014 situation critical', severity: 'critical', time: 'LAST 24H' });
+  } else if (fineCount >= 1) {
+    signals.push({ icon: '\u{1F62C}', text: '"Fine/k/whatever" detected ' + fineCount + 'x \u2014 monitoring', severity: 'high', time: 'LAST 24H' });
+  }
+
+  for (var e = 0; e < evts.length; e++) {
+    var evt = evts[e];
+    var severity = 'low';
+    if (evt.riskLevel >= 80) severity = 'critical';
+    else if (evt.riskLevel >= 50) severity = 'high';
+    else if (evt.riskLevel >= 20) severity = 'medium';
+
+    var icon = evt.riskLevel >= 80 ? '\u{1F4C5}' : evt.riskLevel >= 50 ? '\u{1F4C6}' : '\u{1F5D3}\uFE0F';
+    signals.push({ icon: icon, text: evt.title, severity: severity, time: 'FEB ' + evt.date });
+  }
+
+  var weNeedToTalk = msgs.find(function(m) { return m.text.toLowerCase().indexOf('we need to talk') !== -1; });
+  if (weNeedToTalk) {
+    signals.push({ icon: '\u2622\uFE0F', text: '"We need to talk" \u2014 NUCLEAR OPTION DETECTED', severity: 'critical', time: weNeedToTalk.time });
+  }
+
+  var onlineSpy = msgs.find(function(m) {
+    var lower = m.text.toLowerCase();
+    return lower.indexOf("you're online") !== -1 || lower.indexOf('can see you') !== -1;
+  });
+  if (onlineSpy) {
+    signals.push({ icon: '\u{1F441}\uFE0F', text: 'Online activity monitoring detected \u2014 she knows you saw it', severity: 'critical', time: onlineSpy.time });
+  }
+
+  var order = { critical: 0, high: 1, medium: 2, low: 3 };
+  signals.sort(function(a, b) { return order[a.severity] - order[b.severity]; });
+
+  return signals;
+}
+
+function renderSignals(signals) {
+  var list = document.getElementById('signalList');
+  // Clear existing children safely
+  while (list.firstChild) {
+    list.removeChild(list.firstChild);
+  }
+
+  for (var i = 0; i < signals.length; i++) {
+    var sig = signals[i];
+    var item = document.createElement('div');
+    item.className = 'signal-item severity-' + sig.severity;
+
+    var iconSpan = document.createElement('span');
+    iconSpan.className = 'signal-icon';
+    iconSpan.textContent = sig.icon;
+
+    var body = document.createElement('div');
+    body.className = 'signal-body';
+
+    var timeDiv = document.createElement('div');
+    timeDiv.className = 'signal-time';
+    timeDiv.textContent = sig.time;
+
+    var textDiv = document.createElement('div');
+    textDiv.className = 'signal-text';
+    textDiv.textContent = sig.text;
+
+    body.appendChild(timeDiv);
+    body.appendChild(textDiv);
+
+    var badge = document.createElement('span');
+    badge.className = 'signal-badge ' + sig.severity;
+    badge.textContent = sig.severity.toUpperCase();
+
+    item.appendChild(iconSpan);
+    item.appendChild(body);
+    item.appendChild(badge);
+    list.appendChild(item);
+  }
+}
+
+// ============================================================
+// CALENDAR
+// ============================================================
+
+function renderCalendar() {
+  var grid = document.getElementById('calGrid');
+  var title = document.getElementById('calTitle');
+  var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  title.textContent = monthNames[calMonth] + ' ' + calYear;
+
+  var firstDay = new Date(calYear, calMonth, 1).getDay();
+  var daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  var today = new Date();
+  var isCurrentMonth = today.getMonth() === calMonth && today.getFullYear() === calYear;
+
+  var eventMap = {};
+  if (currentScenario) {
+    for (var e = 0; e < currentScenario.events.length; e++) {
+      var evt = currentScenario.events[e];
+      if (!eventMap[evt.date]) eventMap[evt.date] = [];
+      eventMap[evt.date].push(evt);
+    }
+  }
+
+  // Clear existing children safely
+  while (grid.firstChild) {
+    grid.removeChild(grid.firstChild);
+  }
+
+  var dayNames = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  for (var dn = 0; dn < dayNames.length; dn++) {
+    var el = document.createElement('div');
+    el.className = 'cal-day-name';
+    el.textContent = dayNames[dn];
+    grid.appendChild(el);
+  }
+
+  for (var i = 0; i < firstDay; i++) {
+    var el = document.createElement('div');
+    el.className = 'cal-day empty';
+    grid.appendChild(el);
+  }
+
+  for (var d = 1; d <= daysInMonth; d++) {
+    var el = document.createElement('div');
+    var evts = eventMap[d] || [];
+    var maxRisk = evts.length ? Math.max.apply(null, evts.map(function(ev) { return ev.riskLevel; })) : -1;
+
+    var threatClass = 'threat-none';
+    if (maxRisk >= 80) threatClass = 'threat-critical';
+    else if (maxRisk >= 50) threatClass = 'threat-high';
+    else if (maxRisk >= 20) threatClass = 'threat-medium';
+    else if (maxRisk >= 0 && evts.length) threatClass = 'threat-low';
+
+    el.className = 'cal-day ' + threatClass;
+    if (isCurrentMonth && d === today.getDate()) el.classList.add('today');
+
+    el.textContent = String(d);
+
+    if (evts.length) {
+      var dot = document.createElement('span');
+      dot.className = 'event-dot';
+      el.appendChild(dot);
+
+      var tooltip = document.createElement('div');
+      tooltip.className = 'tooltip';
+      tooltip.textContent = evts.map(function(ev) { return ev.title; }).join(' | ');
+      el.appendChild(tooltip);
+    }
+    grid.appendChild(el);
+  }
+}
+
+// ============================================================
+// FACTORS PANEL
+// ============================================================
+
+function renderFactors() {
+  var grid = document.getElementById('factorsGrid');
+  var msgs = currentScenario.messages;
+
+  var avgResponse = msgs.reduce(function(a, m) { return a + m.responseTimeMin; }, 0) / msgs.length;
+  var emojiRatio = msgs.filter(function(m) { return m.emojis.length > 0; }).length / msgs.length;
+  var avgLen = msgs.reduce(function(a, m) { return a + m.text.length; }, 0) / msgs.length;
+
+  var factors = [
+    { name: 'Response Time', score: currentScores.responseTime, weight: '30%', detail: 'Avg reply: ' + Math.round(avgResponse) + 'min \u2014 baseline: 3min' },
+    { name: 'Emoji Sentiment', score: currentScores.emoji, weight: '20%', detail: Math.round(emojiRatio * 100) + '% of messages contain emoji' },
+    { name: 'Calendar Risk', score: currentScores.calendar, weight: '20%', detail: currentScenario.events.length + ' event(s) detected this month' },
+    { name: 'Text Length', score: currentScores.textLength, weight: '15%', detail: 'Avg message: ' + Math.round(avgLen) + ' chars' },
+    { name: '"Fine" Index', score: currentScores.fineIndex, weight: '15%', detail: 'Passive-aggressive keyword frequency' }
+  ];
+
+  // Clear existing children safely
+  while (grid.firstChild) {
+    grid.removeChild(grid.firstChild);
+  }
+
+  for (var i = 0; i < factors.length; i++) {
+    var f = factors[i];
+    var color = f.score >= 75 ? 'var(--red)' : f.score >= 50 ? 'var(--orange)' : f.score >= 25 ? 'var(--yellow)' : 'var(--green)';
+
+    var el = document.createElement('div');
+    el.className = 'factor';
+
+    var labelDiv = document.createElement('div');
+    labelDiv.className = 'factor-label';
+
+    var nameSpan = document.createElement('span');
+    nameSpan.className = 'factor-name';
+    nameSpan.textContent = f.name + ' (' + f.weight + ')';
+
+    var valueSpan = document.createElement('span');
+    valueSpan.className = 'factor-value';
+    valueSpan.style.color = color;
+    valueSpan.textContent = Math.round(f.score) + '/100';
+
+    labelDiv.appendChild(nameSpan);
+    labelDiv.appendChild(valueSpan);
+
+    var barDiv = document.createElement('div');
+    barDiv.className = 'factor-bar';
+
+    var fillDiv = document.createElement('div');
+    fillDiv.className = 'factor-fill';
+    fillDiv.style.backgroundColor = color;
+    fillDiv.setAttribute('data-width', String(f.score));
+
+    barDiv.appendChild(fillDiv);
+
+    var detailDiv = document.createElement('div');
+    detailDiv.className = 'factor-detail';
+    detailDiv.textContent = f.detail;
+
+    el.appendChild(labelDiv);
+    el.appendChild(barDiv);
+    el.appendChild(detailDiv);
+    grid.appendChild(el);
+  }
+
+  requestAnimationFrame(function() {
+    var fills = document.querySelectorAll('.factor-fill');
+    for (var j = 0; j < fills.length; j++) {
+      fills[j].style.width = fills[j].getAttribute('data-width') + '%';
+    }
+  });
+}
+
+// ============================================================
+// SCENARIO SELECTOR
+// ============================================================
+
+function buildScenarioBar() {
+  var bar = document.getElementById('scenarioBar');
+  while (bar.firstChild) {
+    bar.removeChild(bar.firstChild);
+  }
+
+  var keys = Object.keys(SCENARIOS);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var scenario = SCENARIOS[key];
+    var btn = document.createElement('button');
+    btn.className = 'scenario-btn';
+    btn.setAttribute('data-scenario', key);
+    btn.textContent = scenario.emoji + ' ' + scenario.name;
+    btn.addEventListener('click', (function(k) {
+      return function() { switchScenario(k); };
+    })(key));
+    bar.appendChild(btn);
+  }
+}
+
+function switchScenario(key) {
+  var overlay = document.getElementById('recalcOverlay');
+  overlay.classList.add('show');
+
+  setTimeout(function() {
+    currentScenario = SCENARIOS[key];
+
+    var btns = document.querySelectorAll('.scenario-btn');
+    for (var i = 0; i < btns.length; i++) {
+      if (btns[i].getAttribute('data-scenario') === key) {
+        btns[i].classList.add('active');
+      } else {
+        btns[i].classList.remove('active');
+      }
+    }
+
+    calcThreatLevel();
+
+    updateDefconDisplay(currentScores.defcon);
+    renderGauge(currentScores.defcon);
+    renderSignals(generateSignals(currentScenario));
+    renderCalendar();
+    renderFactors();
+
+    overlay.classList.remove('show');
+  }, 400);
+}
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+
+document.addEventListener('keydown', function(e) {
+  var keys = Object.keys(SCENARIOS);
+  var num = parseInt(e.key, 10);
+  if (num >= 1 && num <= keys.length) {
+    switchScenario(keys[num - 1]);
+  }
+});
+
+// ============================================================
+// CALENDAR NAVIGATION
+// ============================================================
+
+document.getElementById('calPrev').addEventListener('click', function() {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+});
+
+document.getElementById('calNext').addEventListener('click', function() {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+});
+
+// ============================================================
+// INIT
+// ============================================================
+
+buildScenarioBar();
+switchScenario('forgot-anniversary');
+</script>
+</body>
+</html>
