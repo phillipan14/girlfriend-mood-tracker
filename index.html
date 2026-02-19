@@ -343,8 +343,10 @@ body::after {
 }
 
 .gauge-section { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; }
-.timeline-section { grid-column: 1; }
-.calendar-section { grid-column: 2; }
+.timeline-section { grid-column: 1; display: flex; }
+.timeline-section .card { flex: 1; }
+.calendar-section { grid-column: 2; display: flex; }
+.calendar-section .card { flex: 1; }
 .factors-section { grid-column: 1 / -1; }
 
 .card {
@@ -363,11 +365,11 @@ body::after {
 }
 
 /* Gauge */
-.gauge-container { position: relative; width: 320px; height: 200px; }
+.gauge-container { position: relative; width: 360px; height: 210px; }
 .gauge-container canvas { width: 100%; height: 100%; }
-.defcon-display { text-align: center; margin-top: -10px; }
-.defcon-number { font-size: 3rem; font-weight: 700; line-height: 1; transition: color 0.5s; }
-.defcon-label { font-size: 0.8rem; margin-top: 4px; letter-spacing: 2px; transition: color 0.5s; }
+.defcon-display { text-align: center; margin-top: -4px; }
+.defcon-number { font-size: 3.5rem; font-weight: 700; line-height: 1; transition: color 0.5s; }
+.defcon-label { font-size: 0.85rem; margin-top: 6px; letter-spacing: 3px; transition: color 0.5s; }
 
 .gauge-section.defcon-1 .card {
   box-shadow: 0 0 30px var(--red-glow);
@@ -458,8 +460,8 @@ body::after {
 .factor-label { display: flex; justify-content: space-between; font-size: 0.65rem; }
 .factor-name { color: var(--text); }
 .factor-value { font-weight: 700; transition: color 0.5s; }
-.factor-bar { height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
-.factor-fill { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(0.25,0.46,0.45,0.94), background-color 0.5s; width: 0%; }
+.factor-bar { height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+.factor-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.25,0.46,0.45,0.94), background-color 0.5s; width: 0%; box-shadow: 0 0 8px currentColor; }
 .factor-detail { font-size: 0.55rem; color: #555; }
 
 .footer {
@@ -485,11 +487,11 @@ body::after {
 
   <div class="dropzone" id="dropzone">
     <input type="file" id="fileInput" accept=".txt,.csv,.text">
-    <span class="dropzone-icon">📂</span>
+    <span class="dropzone-icon">&#x1F4E1;</span>
     <div class="dropzone-title">Drop your chat export here</div>
     <div class="dropzone-sub">
       iMessage &middot; WhatsApp &middot; Telegram &middot; any .txt chat export<br>
-      Your data never leaves your browser.
+      <span style="color:#00aa2a">100% client-side. Your data never leaves your browser.</span>
     </div>
   </div>
 
@@ -534,7 +536,7 @@ body::after {
       <div class="card">
         <div class="card-header">// CURRENT THREAT LEVEL</div>
         <div class="gauge-container">
-          <canvas id="gaugeCanvas" width="640" height="400"></canvas>
+          <canvas id="gaugeCanvas" width="720" height="420"></canvas>
         </div>
         <div class="defcon-display">
           <div class="defcon-number" id="defconNumber">5</div>
@@ -1080,7 +1082,7 @@ function renderGauge(defcon) {
   var w = canvas.width, h = canvas.height;
   var cx = w / 2, cy = h - 40;
   var radius = Math.min(cx, cy) - 30;
-  var targetAngle = Math.PI - ((5 - defcon) / 4) * Math.PI;
+  var targetAngle = Math.PI + ((5 - defcon) / 4) * Math.PI;
 
   if (gaugeAnimation) cancelAnimationFrame(gaugeAnimation);
 
@@ -1096,36 +1098,55 @@ function renderGauge(defcon) {
 
 function drawGauge(ctx, cx, cy, radius, w, h, needleAngle) {
   ctx.clearRect(0, 0, w, h);
+  var r = radius * 0.78;
   var segments = [
-    { start: Math.PI, end: Math.PI * 0.8, color: '#00ff41' },
-    { start: Math.PI * 0.8, end: Math.PI * 0.6, color: '#88ff00' },
-    { start: Math.PI * 0.6, end: Math.PI * 0.4, color: '#ffdd00' },
-    { start: Math.PI * 0.4, end: Math.PI * 0.2, color: '#ff8c00' },
-    { start: Math.PI * 0.2, end: 0, color: '#ff0040' },
+    { start: Math.PI,       end: Math.PI * 1.2, color: '#00ff41' },
+    { start: Math.PI * 1.2, end: Math.PI * 1.4, color: '#88ff00' },
+    { start: Math.PI * 1.4, end: Math.PI * 1.6, color: '#ffdd00' },
+    { start: Math.PI * 1.6, end: Math.PI * 1.8, color: '#ff8c00' },
+    { start: Math.PI * 1.8, end: Math.PI * 2,   color: '#ff0040' },
   ];
+  // Background arc — dim base (upper semicircle, clockwise)
   for (var s = 0; s < segments.length; s++) {
-    ctx.beginPath(); ctx.arc(cx, cy, radius, segments[s].start, segments[s].end, true);
-    ctx.lineWidth = 20; ctx.strokeStyle = segments[s].color; ctx.globalAlpha = 0.3; ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, segments[s].start, segments[s].end, false);
+    ctx.lineWidth = 36; ctx.strokeStyle = segments[s].color; ctx.globalAlpha = 0.15; ctx.lineCap = 'butt'; ctx.stroke();
+    ctx.restore();
   }
+  // Active arc — bright with glow, from PI clockwise up to needle position
   for (var s = 0; s < segments.length; s++) {
-    var segEnd = Math.max(segments[s].end, needleAngle);
-    if (segments[s].start <= needleAngle) continue;
-    ctx.beginPath(); ctx.arc(cx, cy, radius, segments[s].start, segEnd, true);
-    ctx.lineWidth = 20; ctx.strokeStyle = segments[s].color; ctx.globalAlpha = 0.9; ctx.stroke(); ctx.globalAlpha = 1;
+    if (segments[s].start >= needleAngle) continue;
+    var segEnd = Math.min(segments[s].end, needleAngle);
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, segments[s].start, segEnd, false);
+    ctx.lineWidth = 36; ctx.strokeStyle = segments[s].color;
+    ctx.shadowColor = segments[s].color; ctx.shadowBlur = 20;
+    ctx.globalAlpha = 0.92; ctx.lineCap = 'butt'; ctx.stroke();
+    ctx.restore();
   }
+  // Tick marks and DEFCON labels (upper semicircle)
   for (var i = 0; i <= 4; i++) {
-    var angle = Math.PI - (i / 4) * Math.PI;
-    ctx.beginPath(); ctx.moveTo(cx + Math.cos(angle) * (radius - 16), cy + Math.sin(angle) * (radius - 16));
-    ctx.lineTo(cx + Math.cos(angle) * (radius + 16), cy + Math.sin(angle) * (radius + 16));
-    ctx.strokeStyle = '#444'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#555'; ctx.font = '16px JetBrains Mono, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(String(5 - i), cx + Math.cos(angle) * (radius + 30), cy + Math.sin(angle) * (radius + 30));
+    var angle = Math.PI + (i / 4) * Math.PI;
+    var cos = Math.cos(angle); var sin = Math.sin(angle);
+    ctx.beginPath();
+    ctx.moveTo(cx + cos * (r - 22), cy + sin * (r - 22));
+    ctx.lineTo(cx + cos * (r + 22), cy + sin * (r + 22));
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#888'; ctx.font = 'bold 18px JetBrains Mono, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(5 - i), cx + cos * (r + 40), cy + sin * (r + 40));
   }
-  ctx.beginPath(); ctx.moveTo(cx, cy);
-  ctx.lineTo(cx + Math.cos(needleAngle) * (radius - 30), cy + Math.sin(needleAngle) * (radius - 30));
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.shadowColor = '#fff'; ctx.shadowBlur = 10; ctx.stroke(); ctx.shadowBlur = 0;
-  ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI * 2); ctx.fillStyle = '#333'; ctx.fill();
-  ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+  // Needle — white with glow
+  var nx = cx + Math.cos(needleAngle) * (r - 28);
+  var ny = cy + Math.sin(needleAngle) * (r - 28);
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(nx, ny);
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+  ctx.shadowColor = '#fff'; ctx.shadowBlur = 14; ctx.stroke();
+  ctx.restore();
+  // Center hub
+  ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI * 2); ctx.fillStyle = '#1a1a1a'; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
 }
 
 function updateDefconDisplay(defcon) {

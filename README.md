@@ -12,14 +12,28 @@ A single HTML file. No dependencies. No build step. No backend. Just open it and
 
 ---
 
+## Screenshots
+
+### Upload your chat export (or try a demo)
+![Upload Screen](screenshots/01-upload.png)
+
+### Watch the BIA analyze your relationship in real-time
+![Terminal Analysis](screenshots/02-terminal.png)
+
+### Get your full threat assessment dashboard
+![Dashboard - DEFCON 1](screenshots/03-dashboard.png)
+
+---
+
 ## Features
 
-- **DEFCON Threat Meter** -- Animated gauge that swings from "All Clear" to "Sleep on the Couch"
+- **Chat Export Upload** -- Drag & drop your WhatsApp, iMessage, or any .txt chat export. 100% client-side.
+- **Terminal Analysis Animation** -- Watch the BIA engine scan your messages in a hacker-style typewriter feed
+- **DEFCON Threat Meter** -- Animated canvas gauge that swings from "All Clear" to "Sleep on the Couch"
 - **Intercepted Signals** -- Real-time feed of relationship red flags, sorted by severity
 - **Danger Zone Calendar** -- Color-coded month view showing upcoming threat days
 - **Mood Factor Analysis** -- Breakdown of what's driving the current threat level
 - **6 Pre-Built Scenarios** -- From "Honeymoon Phase" to "We Need to Talk"
-- **Keyboard Shortcuts** -- Press 1-6 to switch scenarios instantly
 - **CRT Aesthetic** -- Dark ops-center theme with scanlines, because relationship analysis is serious business
 
 ## Quick Start
@@ -78,16 +92,15 @@ Edit the `SCENARIOS` object in `index.html`:
 
 PRs with new scenarios are welcome. Bonus points if they're based on real experiences (names changed to protect the guilty).
 
-## Integrations (Architecture Ready)
+## Supported Chat Formats
 
-The codebase is designed with adapter hooks for real data sources:
+Drop any of these into the upload zone:
 
-- iMessage / SMS export
-- Google Calendar API
-- WhatsApp chat export
-- Custom CSV import
+- **WhatsApp** -- `1/15/24, 9:30 AM - Name: message`
+- **iMessage** -- `[2024-01-15 09:30:00] Name: message`
+- **Generic** -- Any `timestamp - name: message` format
 
-These aren't wired up yet because, honestly, if you're feeding real relationship data into a threat assessment algorithm, you might need a different kind of help.
+Your data never leaves your browser. Everything runs client-side.
 
 ## Tech Stack
 
